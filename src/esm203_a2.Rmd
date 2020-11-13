@@ -1,0 +1,176 @@
+---
+title: "Santa Barbara Rainfall"
+author: "Lindsay Hafen"
+date: "11/11/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(here)
+library(janitor)
+library(lubridate)
+library(chron)
+```
+
+## Read in data 
+- Use here(): data is in data file 
+- Change to lower_snake_case to make coding easier using janitor's clean_names()
+- Data was downloaded as standard instead of metric, so the measurements will be in 100th's of inches
+
+```{r}
+sb_rainfall_raw <- read_csv(here("data", "santa_barbara_rainfall.csv")) %>% 
+  clean_names() 
+```
+
+## Look at data summary statistics
+
+```{r}
+summary(sb_rainfall_raw)
+```
+
+
+
+## Wrangle data
+- Organize the date
+- Create a subset with one year of data for second plot
+
+```{r}
+sb_rainfall <- sb_rainfall_raw %>% 
+  separate(col = date, 
+           into = c("date", "time"),
+           sep = " ") %>% 
+  mutate(year = year(date),
+         month = month(date)) %>% 
+  filter(year < 2014, year > 1971)
+
+sb_pcp_year <- sb_rainfall %>% 
+  group_by(year)
+
+fillrow = which(sb_pcp_year$qpcp < 0 | sb_pcp_year$qpcp > 800)
+fillrow
+sb_pcp_year$qpcp[fillrow] = NA
+summary(sb_pcp_year)
+
+sb_pcp_sum <- sb_pcp_year %>% 
+  group_by(year) %>% 
+  summarise(total_pcp = sum(qpcp, na.rm = TRUE))
+```
+
+## Make a plot of the whole range
+- Plot qpcp against year
+
+```{r}
+ggplot(sb_pcp_sum, aes(y = total_pcp, x = year)) +
+  geom_col() +
+  labs(x = "Year", y = "Total precipitation 1/100 (in)", title = "Santa Barbara Precipitation (1972-2013)")
+```
+
+## Make 5 graphs of 1 year periods
+
+```{r}
+fillrow = which(sb_rainfall$qpcp < 0 | sb_rainfall$qpcp > 800)
+fillrow
+sb_rainfall$qpcp[fillrow] = NA
+```
+
+```{r}
+sb_pcp_short_1 <- sb_rainfall %>% 
+  filter(year == 2009) %>% 
+  filter(qpcp > 0) %>% 
+  mutate(date_new = ymd(date)) %>% 
+  group_by(month) %>% 
+  summarise(tot_pcp = sum(qpcp, na.rm = TRUE))
+
+ggplot(sb_pcp_short_1, aes(x = month, y = tot_pcp)) +
+  geom_col() +
+  scale_x_continuous(breaks = seq(1, 12, 1)) +
+  labs(x = "Month", y = "Precipitation in 1/100 (in)", title = "Santa Barbara Rainfall (2009)")
+```
+
+```{r}
+sb_pcp_short_2 <- sb_rainfall %>% 
+  filter(year == 2010) %>% 
+  #filter(qpcp > 0) %>% 
+  mutate(date_new = ymd(date)) %>% 
+  group_by(month) %>% 
+  summarise(tot_pcp = sum(qpcp, na.rm = TRUE))
+
+ggplot(sb_pcp_short_2, aes(x = month, y = tot_pcp)) +
+  geom_col() +
+  scale_x_continuous(breaks = seq(1, 12, 1)) +
+  labs(x = "Month", y = "Precipitation in 1/100 (in)", title = "Santa Barbara Rainfall (2010)")
+```
+
+```{r}
+sb_pcp_short_3 <- sb_rainfall %>% 
+  filter(year == 2011) %>% 
+  #filter(qpcp > 0) %>% 
+  mutate(date_new = ymd(date)) %>% 
+  group_by(month) %>% 
+  summarise(tot_pcp = sum(qpcp, na.rm = TRUE))
+
+ggplot(sb_pcp_short_3, aes(x = month, y = tot_pcp)) +
+  geom_col() +
+  scale_x_continuous(breaks = seq(1, 12, 1)) +
+  labs(x = "Month", y = "Precipitation in 1/100 (in)", title = "Santa Barbara Rainfall (2011)")
+```
+
+```{r}
+sb_pcp_short_4 <- sb_rainfall %>% 
+  filter(year == 2012) %>% 
+  #filter(qpcp > 0) %>% 
+  mutate(date_new = ymd(date)) %>% 
+  group_by(month) %>% 
+  summarise(tot_pcp = sum(qpcp, na.rm = TRUE))
+
+ggplot(sb_pcp_short_4, aes(x = month, y = tot_pcp)) +
+  geom_col() +
+  scale_x_continuous(breaks = seq(1, 12, 1)) +
+  labs(x = "Month", y = "Precipitation in 1/100 (in)", title = "Santa Barbara Rainfall (2012)")
+```
+
+```{r}
+sb_pcp_short_5 <- sb_rainfall %>% 
+  filter(year == 2013) %>% 
+  #filter(qpcp > 0) %>% 
+  mutate(date_new = ymd(date)) %>% 
+  group_by(month) %>% 
+  summarise(tot_pcp = sum(qpcp, na.rm = TRUE))
+
+ggplot(sb_pcp_short_5, aes(x = month, y = tot_pcp)) +
+  geom_col() +
+  scale_x_continuous(breaks = seq(1, 12, 1)) +
+  labs(x = "Month", y = "Precipitation in 1/100 (in)", title = "Santa Barbara Rainfall (2013)")
+```
+
+## Calculate monthly averages
+
+```{r}
+fillrow = which(sb_rainfall$qpcp < 0 | sb_rainfall$qpcp > 800)
+fillrow
+sb_rainfall$qpcp[fillrow] = NA
+```
+
+
+```{r}
+sb_totals <- sb_rainfall %>% 
+  group_by(year, month) %>% 
+  summarize(total_pcp = sum(qpcp, na.rm = TRUE))
+
+sb_averages <- sb_totals %>% 
+  group_by(month) %>% 
+  summarize(average_pcp = mean(total_pcp))
+```
+
+```{r}
+ggplot(sb_averages, aes(x = month, y = average_pcp)) +
+  geom_col() +
+  labs(x = "Month", y = "Precipitation 1/100 (in)", title = "Average Santa Barbara Rainfall (1972-2013)")
+```
+
+
+
+
+
